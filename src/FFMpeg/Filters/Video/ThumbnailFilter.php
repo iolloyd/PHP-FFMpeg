@@ -11,7 +11,7 @@
 
 namespace FFMpeg\Filters\Video;
 
-use FFMpeg\Filters\VideoFilterInterface;
+use FFMpeg\Filters\FilterInterface;
 use FFMpeg\Format\VideoInterface;
 use FFMpeg\Media\Video;
 
@@ -19,12 +19,14 @@ use FFMpeg\Media\Video;
  * Class ThumbnailFilter
  *
  */
-class ThumbnailFilter implements VideoFilterInterface
+class ThumbnailFilter implements FilterInterface
 {
+    protected $params;
+    protected $priority;
+
     /**
-     * @param     $videoFile
-     * @param     $duration
-     * @param int $count
+     * ThumbnailFilter constructor.
+     * @param array $params
      * @param int $priority
      */
     public function __construct(array $params, $priority = 0)
@@ -42,7 +44,7 @@ class ThumbnailFilter implements VideoFilterInterface
     }
 
     /**
-     * @param Video          $video
+     * @param Video $video
      * @param VideoInterface $format
      * @return array
      */
@@ -53,25 +55,22 @@ class ThumbnailFilter implements VideoFilterInterface
         // Avoid making duplicate thumbnails
         $times = array_unique(array_merge(
             $this->params['thumbnail_times'],
-            $this->getIntervalsOrNumber($videoDuration)
-        ));
-        $commandArguments = [];
+            $this->getIntervalsOrNumber($videoDuration))
+        );
 
-        // Since array_unique preserves the keys, we need 
+        // Since array_unique preserves the keys, we need
         // to re-index the $times array
+        $commandArguments = [];
         foreach (array_values($times) as $index => $time) {
-            $commandArguments = array_merge(
-                $commandArguments, 
-                [
-                    '-ss', 
-                    $time, 
-                    '-f', 
-                    'image2', 
-                    '-vframes', 
-                    '1', 
-                    'thumb'.$index.'.png',
-                ]
-            );
+            $commandArguments = array_merge($commandArguments, [
+                '-ss',
+                $time,
+                '-f',
+                'image2',
+                '-vframes',
+                '1',
+                'thumb'.$index.'.png',
+            ]);
         }
 
         return $commandArguments;
@@ -83,13 +82,13 @@ class ThumbnailFilter implements VideoFilterInterface
      */
     protected function getIntervalsOrNumber($videoDuration)
     {
-        return (isset($this->params['thumbnail_interval']))
-            ? $this->getIntervals($videoDuration)
-            : $this->getNumber($videoDuration)
-        ;
+        return (empty($this->params['thumbnail_interval']))
+            ? $this->getNumber($videoDuration)
+            : $this->getIntervals($videoDuration);
     }
 
     /**
+     * @param $videoDuration
      * @return array
      */
     protected function getIntervals($videoDuration)
@@ -99,8 +98,8 @@ class ThumbnailFilter implements VideoFilterInterface
         }
 
         $interval = $this->params['thumbnail_interval'];
-        $start    = isset($this->params['thumbnail_first']) ? 0 : $interval;
-        $times    = range($start, $videoDuration, $interval);
+        $start = isset($this->params['thumbnail_first']) ? 0 : $interval;
+        $times = range($start, $videoDuration, $interval);
 
         return $times;
     }
